@@ -1,17 +1,14 @@
 
-'use server'
+import { auth } from './auth'
+import { can, PERMISSIONS } from './permissions'
 
-import { revalidatePath } from 'next/cache'
-import { auth } from '@/lib/auth'
-import { can, PERMISSIONS } from '@/lib/permissions'
-// import prisma from './prisma' 
-// import bcrypt from 'bcryptjs'
+// Mock server-side function for client-side demo
+const revalidatePath = (path: string) => {
+  console.log(`[Mock] Revalidating path: ${path}`);
+}
 
 // --- HELPER: ACTIVITY LOGGER ---
 async function logActivity(userId: string, action: string, entity: string, details: string) {
-  // await prisma.activityLog.create({
-  //   data: { userId, action, entity, details }
-  // })
   console.log(`[AUDIT] User ${userId} performed ${action} on ${entity}: ${details}`);
 }
 
@@ -26,6 +23,56 @@ async function authorize(permission: string) {
   return user
 }
 
+// --- PUBLIC CONTENT MANAGEMENT (DYNAMIC FETCHING) ---
+
+export async function getPublicContent() {
+  // MOCK DATABASE FOR PUBLIC CONTENT
+  const activities = [
+    {
+      id: 'act-1',
+      tag: "Traslado Privado",
+      title: "Traslado Aeropuerto ✈️ → Alojamiento",
+      subtitle: "Llegá tranquilo a tu alojamiento con chofer local y atención en español.",
+      includes: ["Vehículo cómodo y habilitado", "Chofer local", "Puntualidad garantizada", "Atención en español"],
+      details: ["Desde el aeropuerto de Florianópolis", "Hacia Floripa / Bombinhas / Camboriú", "Servicio privado exclusivo"],
+      price: "USD 100"
+    },
+    {
+      id: 'act-2',
+      tag: "Excursión Estrella",
+      title: "Excursión Playas de Bombinhas",
+      subtitle: "Playas tranquilas, agua cristalina y cero preocupaciones.",
+      includes: ["Traslado ida y vuelta", "Visita a playas seleccionadas", "Tiempo libre para disfrutar", "Asistencia en español"],
+      details: ["Duración aprox: medio día", "Salida desde Florianópolis / Bombinhas", "Apta para parejas y familias"],
+      price: "USD 80"
+    },
+    {
+      id: 'act-3',
+      tag: "Combo Ahorro",
+      title: "Bombinhas Relax – Traslados + Excursión",
+      subtitle: "Todo organizado para que solo disfrutes del viaje.",
+      includes: ["Traslado Florianópolis ↔ Bombinhas", "Excursión playas de Bombinhas", "Asistencia en español"],
+      details: ["No incluye alojamiento", "Ideal si ya tenés dónde hospedarte", "Coordinación total de logística"],
+      price: "USD 220"
+    }
+  ];
+
+  const heroImages = [
+    "https://images.unsplash.com/photo-1596443686812-2f45229eeb33?q=80&w=2071",
+    "https://images.unsplash.com/photo-1518182170546-0766ce6fbe56?q=80&w=2000",
+    "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?q=80&w=2070",
+    "https://images.unsplash.com/photo-1544237128-662b92158869?q=80&w=2070"
+  ];
+
+  revalidatePath('/');
+
+  return {
+    activities,
+    heroImages,
+  };
+}
+
+
 // --- USER MANAGEMENT ---
 
 export async function createUser(formData: FormData) {
@@ -34,11 +81,6 @@ export async function createUser(formData: FormData) {
   const name = formData.get('name') as string;
   const email = formData.get('email') as string;
   const role = formData.get('role') as string;
-  const password = formData.get('password') as string;
-
-  // const hashedPassword = await bcrypt.hash(password, 10);
-
-  // await prisma.user.create(...)
   
   await logActivity(currentUser.id, 'CREATE_USER', 'User', `Created user ${email} with role ${role}`);
   
@@ -52,8 +94,6 @@ export async function updateUser(formData: FormData) {
   const id = formData.get('id') as string;
   const isActive = formData.get('isActive') === 'on';
   
-  // await prisma.user.update(...)
-
   await logActivity(currentUser.id, 'UPDATE_USER', 'User', `Updated user ${id} status to ${isActive}`);
   revalidatePath('/admin/users');
   return { success: true };
@@ -63,11 +103,6 @@ export async function changePassword(formData: FormData) {
   const session = await auth();
   if (!session?.user) throw new Error("Not authenticated");
 
-  const newPassword = formData.get('newPassword') as string;
-  // const hash = await bcrypt.hash(newPassword, 10);
-  
-  // await prisma.user.update({ where: { id: session.user.id }, data: { passwordHash: hash } })
-  
   await logActivity(session.user.id as string, 'CHANGE_PASSWORD', 'User', 'User changed their own password');
   return { success: true };
 }
@@ -77,7 +112,6 @@ export async function changePassword(formData: FormData) {
 export async function savePackage(formData: FormData) {
   const currentUser = await authorize(PERMISSIONS.PACKAGES_EDIT);
   
-  // ... (Existing logic)
   const title = formData.get('title') as string;
   
   await logActivity(currentUser.id, 'SAVE_PACKAGE', 'Package', `Saved package: ${title}`);
@@ -100,7 +134,6 @@ export async function getDashboardStats() {
   const session = await auth();
   const user = session?.user as any;
 
-  // Mock data simulation based on role
   if (can(user, PERMISSIONS.STATS_GLOBAL_VIEW)) {
     return {
       totalSales: 154000,

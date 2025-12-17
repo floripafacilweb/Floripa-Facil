@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
   MapPin, Calendar, Users, CheckCircle, ArrowRight, Menu, X, Phone, Star, 
@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 import { getFinancialReport, FinancialReport } from './lib/finance';
 import { getABTestResults, trackABEvent, ABTestResult, ABMetrics } from './lib/analytics';
+import { getPublicContent } from './lib/actions';
 
 // --- PERMISSIONS CONSTANTS (NO CHANGE) ---
 const PERMISSIONS = {
@@ -43,14 +44,14 @@ const PERMISSIONS = {
 const AVAILABLE_PERMISSIONS = Object.values(PERMISSIONS);
 
 // --- TYPES (NO CHANGE) ---
-interface Role {
+interface AppRole {
   id: string;
   name: string;
   description: string;
   permissions: string[];
 }
 
-interface User {
+interface AppUser {
   id: string;
   name: string;
   email: string;
@@ -77,7 +78,7 @@ interface Log {
 }
 
 // --- HELPER (NO CHANGE) ---
-const can = (user: User | null, permission: string): boolean => {
+const can = (user: AppUser | null, permission: string): boolean => {
   if (!user) return false;
   if (user.roleName === 'OWNER') return true; 
   if (user.roleName === 'ADMIN' && permission !== PERMISSIONS.OWNER_ACCESS) return true;
@@ -85,14 +86,14 @@ const can = (user: User | null, permission: string): boolean => {
 };
 
 // --- INITIAL DATA (UPDATED) ---
-const INITIAL_ROLES: Role[] = [
+const INITIAL_ROLES: AppRole[] = [
   { id: 'role-0', name: 'OWNER', description: 'Dueño del Sistema', permissions: AVAILABLE_PERMISSIONS },
   { id: 'role-1', name: 'ADMIN', description: 'Administrador General', permissions: AVAILABLE_PERMISSIONS.filter(p => p !== PERMISSIONS.OWNER_ACCESS) },
   { id: 'role-2', name: 'SALES', description: 'Vendedor', permissions: [PERMISSIONS.DASHBOARD_VIEW, PERMISSIONS.PACKAGES_VIEW, PERMISSIONS.PRICES_VIEW, PERMISSIONS.RESERVATIONS_VIEW, PERMISSIONS.RESERVATIONS_MANAGE, PERMISSIONS.STATS_PERSONAL_VIEW] },
   { id: 'role-3', name: 'VENDOR', description: 'Proveedor', permissions: [PERMISSIONS.DASHBOARD_VIEW, PERMISSIONS.RESERVATIONS_VIEW] }
 ];
 
-const INITIAL_USERS: User[] = [
+const INITIAL_USERS: AppUser[] = [
   { id: '1', name: 'Dueño Floripa', email: 'info.floripafacil@gmail.com', roleName: 'OWNER', isActive: true, permissions: [] },
   { id: '2', name: 'Admin General', email: 'admin@floripa.com', roleName: 'ADMIN', isActive: true, permissions: [] },
   { id: '3', name: 'Vendedor Top', email: 'ventas@floripa.com', roleName: 'SALES', isActive: true, permissions: [] },
@@ -111,12 +112,9 @@ const INITIAL_SALES: Sale[] = [
   { id: 's3', sellerId: '2', sellerName: 'Admin General', amount: 400, commission: 0, date: '2023-10-03' },
 ];
 
-// New Initial Data for Hero Images
-const INITIAL_HERO_IMAGES = [
-  "https://images.unsplash.com/photo-1596443686812-2f45229eeb33?q=80&w=2071", // Floripa Bridge
-  "https://images.unsplash.com/photo-1518182170546-0766ce6fbe56?q=80&w=2000", // Beach Aerial
-  "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?q=80&w=2070", // Rio/Brazil vibe
-  "https://images.unsplash.com/photo-1544237128-662b92158869?q=80&w=2070"  // Boat
+// Fallback data if fetch fails
+const FALLBACK_HERO_IMAGES = [
+  "https://images.unsplash.com/photo-1596443686812-2f45229eeb33?q=80&w=2071"
 ];
 
 // --- DESIGN SYSTEM & UI COMPONENTS (REFACTORED FOR CONSISTENCY) ---
@@ -133,7 +131,7 @@ const COLORS = {
 };
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  children?: React.ReactNode;
+  children?: ReactNode;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'dark' | 'shimmer';
   className?: string;
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
@@ -158,7 +156,7 @@ const Button = ({ children, variant = 'primary', className = '', ...props }: But
 };
 
 interface CardProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   className?: string;
   noPadding?: boolean;
   key?: React.Key | null | undefined;
@@ -230,7 +228,7 @@ const ActivityCard = ({ title, subtitle, includes, details, price, tag, onClick 
 );
 
 interface BadgeProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   variant?: 'success' | 'warning' | 'error' | 'info' | 'neutral';
   className?: string;
 }
@@ -248,7 +246,7 @@ const Badge = ({ children, variant = 'info', className = '' }: BadgeProps) => {
 };
 
 interface SectionProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   className?: string;
   bg?: 'white' | 'gray';
 }
@@ -263,7 +261,7 @@ const Section = ({ children, className = '', bg = 'white' }: SectionProps) => (
 );
 
 interface HeadingProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   subtitle?: string;
   align?: 'center' | 'left';
   className?: string;
@@ -277,7 +275,11 @@ const Heading = ({ children, subtitle, align = 'center', className = '' }: Headi
 );
 
 // --- NEW COMPONENT: HERO SLIDER ---
-const HeroSlider = ({ images }: { images: string[] }) => {
+interface HeroSliderProps {
+  images: string[];
+}
+
+const HeroSlider = ({ images }: HeroSliderProps) => {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -307,7 +309,12 @@ const HeroSlider = ({ images }: { images: string[] }) => {
 
 // --- LAYOUT COMPONENTS ---
 
-const PublicNavbar = ({ setView, logoUrl }) => {
+interface PublicNavbarProps {
+  setView: (view: { name: string; params: any }) => void;
+  logoUrl: string | null;
+}
+
+const PublicNavbar = ({ setView, logoUrl }: PublicNavbarProps) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -375,8 +382,15 @@ const PublicNavbar = ({ setView, logoUrl }) => {
 
 // --- LANDING PAGES (RESTORED DESIGN & UX PIVOT) ---
 
+interface LandingPageProps {
+  setView: (view: { name: string; params: any }) => void;
+  onTrack: (event: 'views' | 'ctaClicks' | 'whatsappStarts') => void;
+  heroImages: string[];
+  activities: any[];
+}
+
 // VARIANT A: ORIGINAL (Classic & Clean)
-const LandingPageA = ({ setView, onTrack, heroImages }) => {
+const LandingPageA = ({ setView, onTrack, heroImages, activities }: LandingPageProps) => {
   useEffect(() => { onTrack('views'); }, []);
 
   return (
@@ -442,33 +456,18 @@ const LandingPageA = ({ setView, onTrack, heroImages }) => {
       <Section bg="gray">
         <Heading subtitle="Combos y traslados más solicitados.">Actividades Destacadas</Heading>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-           <ActivityCard 
-             tag="Traslado Privado"
-             title="Traslado Aeropuerto ✈️ → Alojamiento"
-             subtitle="Llegá tranquilo a tu alojamiento con chofer local y atención en español."
-             includes={["Vehículo cómodo y habilitado", "Chofer local", "Puntualidad garantizada", "Atención en español"]}
-             details={["Desde el aeropuerto de Florianópolis", "Hacia Floripa / Bombinhas / Camboriú", "Servicio privado exclusivo"]}
-             price="USD 100"
-             onClick={() => onTrack('ctaClicks')}
-           />
-           <ActivityCard 
-             tag="Excursión Estrella"
-             title="Excursión Playas de Bombinhas"
-             subtitle="Playas tranquilas, agua cristalina y cero preocupaciones."
-             includes={["Traslado ida y vuelta", "Visita a playas seleccionadas", "Tiempo libre para disfrutar", "Asistencia en español"]}
-             details={["Duración aprox: medio día", "Salida desde Florianópolis / Bombinhas", "Apta para parejas y familias"]}
-             price="USD 80"
-             onClick={() => onTrack('ctaClicks')}
-           />
-           <ActivityCard 
-             tag="Combo Ahorro"
-             title="Bombinhas Relax – Traslados + Excursión"
-             subtitle="Todo organizado para que solo disfrutes del viaje."
-             includes={["Traslado Florianópolis ↔ Bombinhas", "Excursión playas de Bombinhas", "Asistencia en español"]}
-             details={["No incluye alojamiento", "Ideal si ya tenés dónde hospedarte", "Coordinación total de logística"]}
-             price="USD 220"
-             onClick={() => onTrack('ctaClicks')}
-           />
+           {activities && activities.length > 0 ? activities.map((act) => (
+             <ActivityCard 
+               key={act.id}
+               tag={act.tag}
+               title={act.title}
+               subtitle={act.subtitle}
+               includes={act.includes}
+               details={act.details}
+               price={act.price}
+               onClick={() => onTrack('ctaClicks')}
+             />
+           )) : <div className="col-span-3 text-center text-slate-400">Cargando actividades...</div>}
         </div>
       </Section>
 
@@ -537,7 +536,7 @@ const LandingPageA = ({ setView, onTrack, heroImages }) => {
 };
 
 // VARIANT B: OPTIMIZED (Conversion Focused)
-const LandingPageB = ({ setView, onTrack, heroImages }) => {
+const LandingPageB = ({ setView, onTrack, heroImages, activities }: LandingPageProps) => {
   useEffect(() => { onTrack('views'); }, []);
 
   return (
@@ -635,33 +634,18 @@ const LandingPageB = ({ setView, onTrack, heroImages }) => {
       <Section bg="gray">
         <Heading subtitle="Combos de actividades y logística más vendidos">Actividades Top</Heading>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-           <ActivityCard 
-             tag="Traslado Privado"
-             title="Traslado Aeropuerto ✈️ → Alojamiento"
-             subtitle="Llegá tranquilo a tu alojamiento con chofer local y atención en español."
-             includes={["Vehículo cómodo y habilitado", "Chofer local", "Puntualidad garantizada", "Atención en español"]}
-             details={["Desde el aeropuerto de Florianópolis", "Hacia Floripa / Bombinhas / Camboriú", "Servicio privado exclusivo"]}
-             price="USD 100"
-             onClick={() => onTrack('ctaClicks')}
-           />
-           <ActivityCard 
-             tag="Excursión Estrella"
-             title="Excursión Playas de Bombinhas"
-             subtitle="Playas tranquilas, agua cristalina y cero preocupaciones."
-             includes={["Traslado ida y vuelta", "Visita a playas seleccionadas", "Tiempo libre para disfrutar", "Asistencia en español"]}
-             details={["Duración aprox: medio día", "Salida desde Florianópolis / Bombinhas", "Apta para parejas y familias"]}
-             price="USD 80"
-             onClick={() => onTrack('ctaClicks')}
-           />
-           <ActivityCard 
-             tag="Combo Ahorro"
-             title="Bombinhas Relax – Traslados + Excursión"
-             subtitle="Todo organizado para que solo disfrutes del viaje."
-             includes={["Traslado Florianópolis ↔ Bombinhas", "Excursión playas de Bombinhas", "Asistencia en español"]}
-             details={["No incluye alojamiento", "Ideal si ya tenés dónde hospedarte", "Coordinación total de logística"]}
-             price="USD 220"
-             onClick={() => onTrack('ctaClicks')}
-           />
+           {activities && activities.length > 0 ? activities.map((act) => (
+             <ActivityCard 
+               key={act.id}
+               tag={act.tag}
+               title={act.title}
+               subtitle={act.subtitle}
+               includes={act.includes}
+               details={act.details}
+               price={act.price}
+               onClick={() => onTrack('ctaClicks')}
+             />
+           )) : <div className="col-span-3 text-center text-slate-400">Cargando actividades...</div>}
         </div>
       </Section>
 
@@ -689,7 +673,14 @@ const LandingPageB = ({ setView, onTrack, heroImages }) => {
 // --- DASHBOARD COMPONENTS (CLEANED UP & STANDARDIZED) ---
 
 // Component: Web Config (New for managing Hero Images)
-const WebConfig = ({ heroImages, setHeroImages, logoUrl, setLogoUrl }) => {
+interface WebConfigProps {
+  heroImages: string[];
+  setHeroImages: (images: string[]) => void;
+  logoUrl: string | null;
+  setLogoUrl: (url: string) => void;
+}
+
+const WebConfig = ({ heroImages, setHeroImages, logoUrl, setLogoUrl }: WebConfigProps) => {
   const [newUrl, setNewUrl] = useState('');
   const [newLogoUrl, setNewLogoUrl] = useState(logoUrl || '');
 
@@ -700,7 +691,7 @@ const WebConfig = ({ heroImages, setHeroImages, logoUrl, setLogoUrl }) => {
     }
   };
 
-  const removeImage = (index) => {
+  const removeImage = (index: number) => {
     const newImages = heroImages.filter((_, i) => i !== index);
     setHeroImages(newImages);
   };
@@ -1091,13 +1082,20 @@ const FinanceDashboard = () => {
   );
 };
 
-const UserManagement = ({ users, setUsers, roles, currentUser }) => {
+interface UserManagementProps {
+  users: AppUser[];
+  setUsers: (users: AppUser[]) => void;
+  roles: AppRole[];
+  currentUser: AppUser;
+}
+
+const UserManagement = ({ users, setUsers, roles, currentUser }: UserManagementProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  const handleCreateUser = (e) => {
+  const handleCreateUser = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const newUser: User = {
+    const newUser: AppUser = {
       id: Date.now().toString(),
       name: formData.get('name') as string,
       email: formData.get('email') as string,
@@ -1109,7 +1107,7 @@ const UserManagement = ({ users, setUsers, roles, currentUser }) => {
     setIsModalOpen(false);
   };
 
-  const toggleStatus = (id) => {
+  const toggleStatus = (id: string) => {
     setUsers(users.map(u => u.id === id ? { ...u, isActive: !u.isActive } : u));
   };
 
@@ -1183,14 +1181,20 @@ const UserManagement = ({ users, setUsers, roles, currentUser }) => {
   );
 };
 
-const AnalyticsDashboard = ({ sales, users, currentUser }) => {
+interface AnalyticsDashboardProps {
+  sales: Sale[];
+  users: AppUser[];
+  currentUser: AppUser;
+}
+
+const AnalyticsDashboard = ({ sales, users, currentUser }: AnalyticsDashboardProps) => {
   const isGlobal = can(currentUser, PERMISSIONS.STATS_GLOBAL_VIEW);
   const filteredSales = isGlobal ? sales : sales.filter(s => s.sellerId === currentUser.id);
 
   const totalSales = filteredSales.reduce((sum, s) => sum + s.amount, 0);
   const totalCommission = filteredSales.reduce((sum, s) => sum + s.commission, 0);
 
-  const ranking = Object.entries(sales.reduce((acc, sale) => {
+  const ranking = Object.entries(sales.reduce((acc: any, sale) => {
     acc[sale.sellerName] = (acc[sale.sellerName] || 0) + sale.amount;
     return acc;
   }, {})).sort((a:any, b:any) => b[1] - a[1]);
@@ -1246,7 +1250,11 @@ const AnalyticsDashboard = ({ sales, users, currentUser }) => {
   );
 };
 
-const AuditLog = ({ logs }) => (
+interface AuditLogProps {
+  logs: Log[];
+}
+
+const AuditLog = ({ logs }: AuditLogProps) => (
   <div>
     <div className="mb-6">
       <h2 className="text-2xl font-bold text-slate-900">Auditoría</h2>
@@ -1275,7 +1283,16 @@ const AuditLog = ({ logs }) => (
 
 // --- MAIN DASHBOARD SHELL ---
 
-const AdminDashboard = ({ user, onLogout, heroImages, setHeroImages, logoUrl, setLogoUrl }) => {
+interface AdminDashboardProps {
+  user: AppUser;
+  onLogout: () => void;
+  heroImages: string[];
+  setHeroImages: (images: string[]) => void;
+  logoUrl: string | null;
+  setLogoUrl: (url: string) => void;
+}
+
+const AdminDashboard = ({ user, onLogout, heroImages, setHeroImages, logoUrl, setLogoUrl }: AdminDashboardProps) => {
   const [activeTab, setActiveTab] = useState('analytics');
   
   const [users, setUsers] = useState(INITIAL_USERS);
@@ -1377,7 +1394,7 @@ const AdminDashboard = ({ user, onLogout, heroImages, setHeroImages, logoUrl, se
 
 // --- AUTH SCREEN ---
 
-const mockLogin = (email, password) => {
+const mockLogin = (email: string, password: string) => {
   // Verificación específica para el dueño con la contraseña solicitada
   if (email === 'info.floripafacil@gmail.com' && password !== 'Colo1981!') {
     return null;
@@ -1391,12 +1408,17 @@ const mockLogin = (email, password) => {
   return null;
 };
 
-const AdminLogin = ({ onLogin, setView }) => {
+interface AdminLoginProps {
+  onLogin: (user: AppUser) => void;
+  setView: (view: { name: string; params: any }) => void;
+}
+
+const AdminLogin = ({ onLogin, setView }: AdminLoginProps) => {
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
   const [error, setError] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const user = mockLogin(email, pass);
     if (user) onLogin(user);
@@ -1436,13 +1458,15 @@ const AdminLogin = ({ onLogin, setView }) => {
 
 const App = () => {
   const [currentView, setView] = useState<{name: string, params: any}>({ name: 'HOME', params: null });
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   
   const [variant, setVariant] = useState<'A' | 'B'>('A');
-  const [heroImages, setHeroImages] = useState(INITIAL_HERO_IMAGES);
+  const [heroImages, setHeroImages] = useState<string[]>([]);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {
+    // 1. Load A/B Variant
     const savedVariant = localStorage.getItem('ab_variant');
     if (savedVariant === 'A' || savedVariant === 'B') {
       setVariant(savedVariant);
@@ -1451,9 +1475,23 @@ const App = () => {
       localStorage.setItem('ab_variant', newVariant);
       setVariant(newVariant);
     }
+
+    // 2. Fetch Dynamic Content (Activities, Images)
+    // This forces fresh data on client mount, fixing the stale Vercel build issue
+    getPublicContent().then(data => {
+      if (data) {
+        setHeroImages(data.heroImages || FALLBACK_HERO_IMAGES);
+        setActivities(data.activities || []);
+        // Note: Logo URL could also be fetched here if dynamic
+      }
+    }).catch(err => {
+      console.error("Failed to fetch public content", err);
+      setHeroImages(FALLBACK_HERO_IMAGES);
+    });
+
   }, []);
 
-  const handleTrack = (event) => {
+  const handleTrack = (event: 'views' | 'ctaClicks' | 'whatsappStarts') => {
     trackABEvent(variant, event);
   };
 
@@ -1476,13 +1514,16 @@ const App = () => {
     <>
       <PublicNavbar setView={setView} logoUrl={logoUrl} />
       {variant === 'A' ? (
-        <LandingPageA setView={setView} onTrack={handleTrack} heroImages={heroImages} />
+        <LandingPageA setView={setView} onTrack={handleTrack} heroImages={heroImages} activities={activities} />
       ) : (
-        <LandingPageB setView={setView} onTrack={handleTrack} heroImages={heroImages} />
+        <LandingPageB setView={setView} onTrack={handleTrack} heroImages={heroImages} activities={activities} />
       )}
     </>
   );
 };
 
-const root = createRoot(document.getElementById('root'));
-root.render(<App />);
+const container = document.getElementById('root');
+if (container) {
+  const root = createRoot(container);
+  root.render(<App />);
+}
