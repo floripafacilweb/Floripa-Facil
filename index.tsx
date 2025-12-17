@@ -2,35 +2,16 @@
 import React, { useState, useEffect, ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
-  MapPin, Calendar, Users, CheckCircle, ArrowRight, Menu, X, Phone, Star, 
-  ShieldCheck, Heart, CreditCard, ChevronLeft, Settings, Plus, Trash2, Edit2, 
-  Save, LogOut, Image as ImageIcon, Lock, Eye, AlertTriangle, Shield, Key,
-  BarChart3, Activity, DollarSign, Search, UserPlus, UserCheck, UserX,
-  PieChart as PieIcon, TrendingUp, TrendingDown, Target, AlertCircle, 
-  Briefcase, Sun, Umbrella, MessageCircle, MousePointer, Trophy, Split, ThumbsUp,
-  Bus, Map, Camera, Anchor, Palmtree, Navigation, Clock, Layout, Monitor
+  CheckCircle, ArrowRight, Star, LogOut, Sun, MessageCircle, Bus, BarChart3, Users
 } from 'lucide-react';
-import { 
-  LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
-} from 'recharts';
-import { getFinancialReport, FinancialReport } from './lib/finance';
-import { trackABEvent } from './lib/analytics';
 import { getPublicContent } from './lib/actions';
 
-// --- PERMISSIONS ---
-const PERMISSIONS = {
-  OWNER_ACCESS: 'owner.access',
-  FINANCE_VIEW: 'finance.dashboard.view',
-  DASHBOARD_VIEW: 'dashboard.view',
-  USERS_MANAGE: 'users.manage',
-  ROLES_MANAGE: 'roles.manage',
-  PACKAGES_VIEW: 'packages.view',
-  PACKAGES_EDIT: 'packages.edit',
-  PACKAGES_DELETE: 'packages.delete',
-  STATS_GLOBAL_VIEW: 'stats.global.view',
-  AUDIT_LOGS_VIEW: 'audit.logs.view',
-};
+/**
+ * CONFIGURACIÓN DE RENDERIZADO NEXT.JS (APP ROUTER)
+ * Forzamos que Vercel no genere esta página de forma estática.
+ */
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 // --- TYPES ---
 interface AppUser {
@@ -41,13 +22,6 @@ interface AppUser {
   isActive: boolean;
   permissions: string[]; 
 }
-
-const can = (user: AppUser | null, permission: string): boolean => {
-  if (!user) return false;
-  if (user.roleName === 'OWNER') return true; 
-  if (user.roleName === 'ADMIN' && permission !== PERMISSIONS.OWNER_ACCESS) return true;
-  return user.permissions.includes(permission);
-};
 
 // --- UI COMPONENTS ---
 const Button = ({ children, variant = 'primary', className = '', ...props }: any) => {
@@ -108,16 +82,28 @@ const HeroSlider = ({ images }: { images: string[] }) => {
   );
 };
 
-// --- MAIN LANDING (CONSOLIDATED) ---
+/**
+ * LANDING PRINCIPAL CONSOLIDADA (Layout de Conversión)
+ */
 const MainLanding = ({ content }: { content: any }) => {
   return (
     <div className="min-h-screen bg-white font-sans">
+      <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 py-4">
+        <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="bg-blue-600 p-2 rounded-lg text-white"><Bus size={20}/></div>
+            <span className="text-xl font-black tracking-tight">FLORIPA FÁCIL</span>
+          </div>
+          <Button variant="ghost" className="hidden sm:inline-flex">Acceso Staff</Button>
+        </div>
+      </nav>
+
       {/* HERO */}
       <div className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-slate-900">
         <HeroSlider images={content.heroImages} />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center lg:text-left">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400 text-slate-900 font-bold text-xs mb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400 text-slate-900 font-bold text-xs mb-6 shadow-lg">
                <Star size={12} fill="currentColor" /> 4.9/5 - Logística y Tours en Brasil
             </div>
             <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-tight tracking-tight">
@@ -189,85 +175,41 @@ const MainLanding = ({ content }: { content: any }) => {
   );
 };
 
-// --- ADMIN DASHBOARD ---
-const AdminDashboard = ({ user, onLogout, logoUrl, setLogoUrl }: any) => {
-  const [activeTab, setActiveTab] = useState('analytics');
-  return (
-    <div className="min-h-screen bg-slate-50 flex font-sans">
-      <aside className="w-72 bg-slate-900 text-slate-300 fixed h-full flex flex-col z-20 shadow-xl">
-        <div className="p-8">
-          <div className="flex items-center gap-3 text-white mb-8">
-            <Sun className="text-blue-500" size={24} />
-            <span className="text-xl font-black">FLORIPA ADMIN</span>
-          </div>
-          <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white">{user.name[0]}</div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-bold text-white truncate">{user.name}</p>
-              <p className="text-[10px] font-bold text-blue-400 uppercase">{user.roleName}</p>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1 px-4 space-y-1">
-          <button onClick={() => setActiveTab('analytics')} className={`w-full flex items-center p-3 rounded-lg transition-all ${activeTab === 'analytics' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}>
-            <BarChart3 size={20} className="mr-3" /> Operativo
-          </button>
-          <button onClick={() => setActiveTab('users')} className={`w-full flex items-center p-3 rounded-lg transition-all ${activeTab === 'users' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}>
-            <Users size={20} className="mr-3" /> Usuarios
-          </button>
-        </nav>
-        <div className="p-4 border-t border-slate-800">
-          <button onClick={onLogout} className="w-full flex items-center p-3 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors">
-            <LogOut size={20} className="mr-3" /> Cerrar Sesión
-          </button>
-        </div>
-      </aside>
-      <main className="flex-1 ml-72 p-12">
-         {activeTab === 'analytics' && <div className="text-2xl font-bold text-slate-900">Dashboard Operativo</div>}
-         {activeTab === 'users' && <div className="text-2xl font-bold text-slate-900">Gestión de Usuarios</div>}
-      </main>
-    </div>
-  );
-};
-
-const App = () => {
-  const [view, setView] = useState('HOME');
+/**
+ * ENTRY POINT (APP)
+ * En este entorno es un Client Component que simula el comportamiento del Server Component 
+ * mediante una carga inmediata de datos sin estados reactivos para el contenido principal.
+ */
+const App = ({ initialContent }: { initialContent: any }) => {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [content, setContent] = useState<any>(null);
+  const [isAdminView, setIsAdminView] = useState(false);
 
-  useEffect(() => {
-    getPublicContent().then(setContent);
-  }, []);
-
-  if (!content) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white animate-pulse">Cargando experiencia...</div>;
-
-  if (view === 'ADMIN' && user) return <AdminDashboard user={user} onLogout={() => { setUser(null); setView('HOME'); }} />;
-  if (view === 'ADMIN_LOGIN') return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-sm text-center">
-        <Sun className="mx-auto text-blue-600 mb-4" size={48} />
-        <h2 className="text-2xl font-black mb-6">Acceso Staff</h2>
-        <Button className="w-full" onClick={() => { setUser({ id: '1', name: 'Dueño', email: 'info@floripafacil.com', roleName: 'OWNER', isActive: true, permissions: [] }); setView('ADMIN'); }}>Login Simulado</Button>
-        <button className="mt-6 text-slate-400 text-sm" onClick={() => setView('HOME')}>Volver</button>
-      </Card>
-    </div>
-  );
-
-  return (
-    <>
-      <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 py-4">
-        <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('HOME')}>
-            <div className="bg-blue-600 p-2 rounded-lg text-white"><Bus size={20}/></div>
-            <span className="text-xl font-black tracking-tight">FLORIPA FÁCIL</span>
-          </div>
-          <Button variant="ghost" onClick={() => setView('ADMIN_LOGIN')}>Staff</Button>
+  if (isAdminView && user) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-12">
+        <div className="max-w-4xl mx-auto">
+          <Card>
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-black">Admin Panel</h2>
+              <Button variant="ghost" onClick={() => setIsAdminView(false)}><LogOut className="mr-2"/> Salir</Button>
+            </div>
+            <p className="text-slate-500 italic">Panel operativo estable.</p>
+          </Card>
         </div>
-      </nav>
-      <MainLanding content={content} />
-    </>
-  );
+      </div>
+    );
+  }
+
+  return <MainLanding content={initialContent} />;
 };
 
-const root = createRoot(document.getElementById('root')!);
-root.render(<App />);
+// --- BOOTSTRAP ---
+const container = document.getElementById('root');
+if (container) {
+  // En Next.js App Router, el servidor pasaría el contenido directamente.
+  // Aquí lo emulamos para que la landing sea 100% dinámica basándose en la Server Action.
+  getPublicContent().then(content => {
+    const root = createRoot(container);
+    root.render(<App initialContent={content} />);
+  });
+}

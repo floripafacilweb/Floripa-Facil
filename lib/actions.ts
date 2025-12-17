@@ -1,17 +1,19 @@
 
-import { auth } from './auth'
-import { can, PERMISSIONS } from './permissions'
+'use server';
 
-// Forzamos renderizado dinámico para evitar caché estática en Vercel
-export const dynamic = "force-dynamic";
+import { unstable_noStore as noStore } from "next/cache";
+import { auth } from './auth';
+import { can, PERMISSIONS } from './permissions';
 
-const revalidatePath = (path: string) => {
-  console.log(`[System] Revalidating: ${path}`);
-}
-
+/**
+ * Función central de obtención de contenido público.
+ * Utiliza noStore() para deshabilitar el cacheo estático de Vercel (Data Cache).
+ */
 export async function getPublicContent() {
-  // Simulación de consulta a Base de Datos
-  // Esta es la única fuente de verdad para la web
+  noStore();
+
+  // Simulación de Base de Datos dinámica
+  // Todo el contenido se centraliza aquí para facilitar actualizaciones sin redeplegar lógica
   return {
     hero: {
       title: "Disfrutá Brasil sin estrés",
