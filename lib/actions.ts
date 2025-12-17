@@ -7,13 +7,11 @@ import { can, PERMISSIONS } from './permissions';
 
 /**
  * Función central de obtención de contenido público.
- * Utiliza noStore() para deshabilitar el cacheo estático de Vercel (Data Cache).
+ * noStore() invalida cualquier intento de Next.js de cachear este resultado.
  */
 export async function getPublicContent() {
   noStore();
 
-  // Simulación de Base de Datos dinámica
-  // Todo el contenido se centraliza aquí para facilitar actualizaciones sin redeplegar lógica
   return {
     hero: {
       title: "Disfrutá Brasil sin estrés",

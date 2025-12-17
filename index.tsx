@@ -7,11 +7,12 @@ import {
 import { getPublicContent } from './lib/actions';
 
 /**
- * CONFIGURACIÓN DE RENDERIZADO NEXT.JS (APP ROUTER)
- * Forzamos que Vercel no genere esta página de forma estática.
+ * CONFIGURACIÓN DINÁMICA DE NEXT.JS
+ * Desactivamos explícitamente el cacheo estático a nivel de ruta.
  */
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
 // --- TYPES ---
 interface AppUser {
@@ -82,9 +83,6 @@ const HeroSlider = ({ images }: { images: string[] }) => {
   );
 };
 
-/**
- * LANDING PRINCIPAL CONSOLIDADA (Layout de Conversión)
- */
 const MainLanding = ({ content }: { content: any }) => {
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -98,7 +96,6 @@ const MainLanding = ({ content }: { content: any }) => {
         </div>
       </nav>
 
-      {/* HERO */}
       <div className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-slate-900">
         <HeroSlider images={content.heroImages} />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center lg:text-left">
@@ -130,12 +127,11 @@ const MainLanding = ({ content }: { content: any }) => {
         </div>
       </div>
 
-      {/* ACTIVITIES */}
       <section className="py-20 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Actividades Destacadas</h2>
-            <p className="text-lg text-slate-500 max-w-2xl mx-auto">Los combos y traslados más solicitados para tu viaje.</p>
+            <p className="text-lg text-slate-500 max-w-2xl mx-auto">Actualizado en tiempo real: {new Date().toLocaleTimeString('es-AR')}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {content.activities.map((act: any) => (
@@ -145,7 +141,6 @@ const MainLanding = ({ content }: { content: any }) => {
         </div>
       </section>
 
-      {/* DESTINATIONS */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -175,39 +170,12 @@ const MainLanding = ({ content }: { content: any }) => {
   );
 };
 
-/**
- * ENTRY POINT (APP)
- * En este entorno es un Client Component que simula el comportamiento del Server Component 
- * mediante una carga inmediata de datos sin estados reactivos para el contenido principal.
- */
 const App = ({ initialContent }: { initialContent: any }) => {
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [isAdminView, setIsAdminView] = useState(false);
-
-  if (isAdminView && user) {
-    return (
-      <div className="min-h-screen bg-slate-50 p-12">
-        <div className="max-w-4xl mx-auto">
-          <Card>
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-2xl font-black">Admin Panel</h2>
-              <Button variant="ghost" onClick={() => setIsAdminView(false)}><LogOut className="mr-2"/> Salir</Button>
-            </div>
-            <p className="text-slate-500 italic">Panel operativo estable.</p>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
   return <MainLanding content={initialContent} />;
 };
 
-// --- BOOTSTRAP ---
 const container = document.getElementById('root');
 if (container) {
-  // En Next.js App Router, el servidor pasaría el contenido directamente.
-  // Aquí lo emulamos para que la landing sea 100% dinámica basándose en la Server Action.
   getPublicContent().then(content => {
     const root = createRoot(container);
     root.render(<App initialContent={content} />);
