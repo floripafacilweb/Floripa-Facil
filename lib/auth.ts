@@ -21,8 +21,12 @@ const MOCK_ROLES = {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
   pages: {
     signIn: '/login',
+  },
+  session: {
+    strategy: "jwt",
   },
   providers: [
     Credentials({
@@ -52,8 +56,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async session({ session, token }) {
       if (token && session.user) {
-        (session.user as any).role = token.role
-        (session.user as any).permissions = token.permissions
+        (session.user as any).role = token.role as string
+        (session.user as any).permissions = token.permissions as string[]
       }
       return session
     },

@@ -2,7 +2,9 @@
 import React from 'react';
 import { auth, signOut } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { Bus, LayoutDashboard, LogOut, Users, Package, Settings, ChevronRight } from 'lucide-react';
+import { Bus, LayoutDashboard, LogOut, Users, Package, ChevronRight } from 'lucide-react';
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
   const session = await auth();

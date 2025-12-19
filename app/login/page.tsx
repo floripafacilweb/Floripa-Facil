@@ -20,7 +20,6 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Usamos el redirect: false para manejar el error nosotros mismos en la UI
       const result = await signIn('credentials', {
         email,
         password,
@@ -31,12 +30,14 @@ export default function LoginPage() {
         setError('Acceso denegado. Verificá tu email y contraseña.');
         setLoading(false);
       } else {
-        // Redirección manual tras éxito
-        router.push('/admin');
+        // Refresh para que el middleware detecte la nueva cookie antes de navegar
         router.refresh();
+        setTimeout(() => {
+          router.push('/admin');
+        }, 100);
       }
     } catch (err) {
-      setError('Error de conexión con el servidor.');
+      setError('Error de conexión con el sistema de autenticación.');
       setLoading(false);
     }
   };
@@ -62,13 +63,13 @@ export default function LoginPage() {
         <div className="bg-white py-8 px-4 shadow-2xl sm:rounded-3xl sm:px-10 border border-slate-100">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-red-50 border-l-4 border-red-400 p-4 text-sm text-red-700 font-medium">
+              <div className="bg-red-50 border-l-4 border-red-400 p-4 text-sm text-red-700 font-medium animate-fade-in">
                 {error}
               </div>
             )}
             
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Email</label>
+              <label className="block text-sm font-bold text-slate-700 mb-2">Email corporativo</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <Mail size={18} />
@@ -76,8 +77,9 @@ export default function LoginPage() {
                 <input
                   type="email"
                   required
-                  className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="info@floripafacil.com"
+                  autoComplete="email"
+                  className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  placeholder="ejemplo@floripafacil.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -93,7 +95,8 @@ export default function LoginPage() {
                 <input
                   type="password"
                   required
-                  className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none"
+                  autoComplete="current-password"
+                  className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -104,9 +107,14 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-lg text-sm font-black text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-all"
+              className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-lg text-sm font-black text-white bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:opacity-50 transition-all"
             >
-              {loading ? <Loader2 className="animate-spin" size={20} /> : 'Entrar al Panel'}
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="animate-spin" size={20} />
+                  <span>Verificando...</span>
+                </div>
+              ) : 'Ingresar al Panel'}
             </button>
           </form>
         </div>
