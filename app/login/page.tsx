@@ -20,6 +20,7 @@ export default function LoginPage() {
     setError('');
 
     try {
+      // Usamos el redirect: false para manejar el error nosotros mismos en la UI
       const result = await signIn('credentials', {
         email,
         password,
@@ -27,13 +28,15 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError('Credenciales incorrectas. Verificá tus datos.');
+        setError('Acceso denegado. Verificá tu email y contraseña.');
+        setLoading(false);
       } else {
+        // Redirección manual tras éxito
         router.push('/admin');
+        router.refresh();
       }
     } catch (err) {
-      setError('Ocurrió un error inesperado.');
-    } finally {
+      setError('Error de conexión con el servidor.');
       setLoading(false);
     }
   };
@@ -53,22 +56,19 @@ export default function LoginPage() {
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">Acceso Staff</h2>
-        <p className="mt-2 text-center text-sm text-slate-600">
-          Panel interno de gestión Floripa Fácil
-        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-2xl sm:rounded-3xl sm:px-10 border border-slate-100">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-red-50 border-l-4 border-red-400 p-4 text-sm text-red-700 font-medium animate-fade-in">
+              <div className="bg-red-50 border-l-4 border-red-400 p-4 text-sm text-red-700 font-medium">
                 {error}
               </div>
             )}
             
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Email corporativo</label>
+              <label className="block text-sm font-bold text-slate-700 mb-2">Email</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <Mail size={18} />
@@ -76,8 +76,8 @@ export default function LoginPage() {
                 <input
                   type="email"
                   required
-                  className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
-                  placeholder="ejemplo@floripafacil.com"
+                  className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="info@floripafacil.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -93,7 +93,7 @@ export default function LoginPage() {
                 <input
                   type="password"
                   required
-                  className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
+                  className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -101,19 +101,13 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-lg text-sm font-black text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
-              >
-                {loading ? (
-                  <Loader2 className="animate-spin" size={20} />
-                ) : (
-                  'Ingresar al Sistema'
-                )}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-lg text-sm font-black text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-all"
+            >
+              {loading ? <Loader2 className="animate-spin" size={20} /> : 'Entrar al Panel'}
+            </button>
           </form>
         </div>
       </div>

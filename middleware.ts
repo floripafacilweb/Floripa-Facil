@@ -4,17 +4,24 @@ import { NextResponse } from "next/server"
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth
-  const isOnAdmin = req.nextUrl.pathname.startsWith("/admin")
+  const { nextUrl } = req
 
+  const isOnAdmin = nextUrl.pathname.startsWith("/admin")
+  const isOnLogin = nextUrl.pathname.startsWith("/login")
+
+  // Si intenta ir a admin sin estar logueado
   if (isOnAdmin && !isLoggedIn) {
-    // Si no está logueado y trata de entrar a /admin, mandamos al login público o de admin
-    return NextResponse.redirect(new URL("/", req.nextUrl))
+    return NextResponse.redirect(new URL("/login", nextUrl))
+  }
+
+  // Si ya está logueado e intenta ir al login, mandarlo al admin
+  if (isOnLogin && isLoggedIn) {
+    return NextResponse.redirect(new URL("/admin", nextUrl))
   }
 
   return NextResponse.next()
 })
 
 export const config = {
-  // El matcher asegura que el middleware solo corra en rutas específicas y no en estáticos
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 }
