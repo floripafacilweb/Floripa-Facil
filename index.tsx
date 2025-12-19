@@ -1,1 +1,0 @@
-// Archivo eliminado para usar app/page.tsx
