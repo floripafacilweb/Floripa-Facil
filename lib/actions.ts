@@ -2,12 +2,10 @@
 'use server';
 
 import { unstable_noStore as noStore } from "next/cache";
-import { auth } from './auth';
-import { can, PERMISSIONS } from './permissions';
 
 /**
  * Función central de obtención de contenido público.
- * noStore() invalida cualquier intento de Next.js de cachear este resultado.
+ * noStore() invalida cualquier intento de Next.js de cachear este resultado en Vercel Data Cache.
  */
 export async function getPublicContent() {
   noStore();
@@ -63,22 +61,6 @@ export async function getPublicContent() {
       "https://images.unsplash.com/photo-1518182170546-0766ce6fbe56?q=80&w=2000",
       "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?q=80&w=2070",
       "https://images.unsplash.com/photo-1544237128-662b92158869?q=80&w=2070"
-    ]
-  };
-}
-
-export async function getDashboardStats() {
-  const session = await auth();
-  const user = session?.user as any;
-  if (!user) return null;
-
-  return {
-    totalSales: 154000,
-    totalCommissions: 23100,
-    activeUsers: 12,
-    recentActivity: [
-      { action: 'SALE_CONFIRMED', user: 'Vendedor 1', time: '10 min ago' },
-      { action: 'LOGIN', user: 'Admin', time: '1 hour ago' }
     ]
   };
 }
