@@ -2,13 +2,64 @@
 'use server';
 
 import { unstable_noStore as noStore } from "next/cache";
+import { supabase } from "./supabase";
 
-/**
- * Función central de obtención de contenido público.
- * noStore() invalida cualquier intento de Next.js de cachear este resultado en Vercel Data Cache.
- */
 export async function getPublicContent() {
   noStore();
+
+  // Intentamos traer los paquetes reales de Supabase
+  let activePackages = [];
+  try {
+    const { data, error } = await supabase
+      .from('packages')
+      .select('*')
+      .eq('status', 'Activo');
+    
+    if (!error && data && data.length > 0) {
+      activePackages = data;
+    }
+  } catch (e) {
+    console.error("Error fetching from Supabase:", e);
+  }
+
+  // Si no hay datos en Supabase, usamos los predefinidos
+  const displayPackages = activePackages.length > 0 ? activePackages.map(p => ({
+    id: p.id.toString(),
+    tag: p.category,
+    title: p.name,
+    subtitle: p.description || "Servicio profesional garantizado.",
+    includes: p.includes || ["Atención en español", "Vehículo habilitado"],
+    details: [],
+    price: `USD ${p.price}`
+  })) : [
+    {
+      id: 'act-1',
+      tag: "Traslado Privado",
+      title: "Traslado Aeropuerto ✈️ → Alojamiento",
+      subtitle: "Llegá tranquilo a tu alojamiento con chofer local y atención en español.",
+      includes: ["Vehículo cómodo y habilitado", "Chofer local", "Puntualidad garantizada", "Atención en español"],
+      details: ["Desde el aeropuerto de Florianópolis", "Hacia Floripa / Bombinhas / Camboriú", "Servicio privado exclusivo"],
+      price: "USD 100"
+    },
+    {
+      id: 'act-2',
+      tag: "Excursión Estrella",
+      title: "Excursión Playas de Bombinhas",
+      subtitle: "Playas tranquilas, agua cristalina y cero preocupaciones.",
+      includes: ["Traslado ida y vuelta", "Visita a playas seleccionadas", "Tiempo libre para disfrutar", "Asistencia en español"],
+      details: ["Duración aprox: medio día", "Salida desde Florianópolis / Bombinhas", "Apta para parejas y familias"],
+      price: "USD 80"
+    },
+    {
+      id: 'act-3',
+      tag: "Combo Ahorro",
+      title: "Bombinhas Relax – Traslados + Excursión",
+      subtitle: "Todo organizado para que solo disfrutes del viaje.",
+      includes: ["Traslado Florianópolis ↔ Bombinhas", "Excursión playas de Bombinhas", "Asistencia en español"],
+      details: ["No incluye alojamiento", "Ideal si ya tenés dónde hospedarte", "Coordinación total de logística"],
+      price: "USD 220"
+    }
+  ];
 
   return {
     hero: {
@@ -22,35 +73,7 @@ export async function getPublicContent() {
         "Atención en Español"
       ]
     },
-    activities: [
-      {
-        id: 'act-1',
-        tag: "Traslado Privado",
-        title: "Traslado Aeropuerto ✈️ → Alojamiento",
-        subtitle: "Llegá tranquilo a tu alojamiento con chofer local y atención en español.",
-        includes: ["Vehículo cómodo y habilitado", "Chofer local", "Puntualidad garantizada", "Atención en español"],
-        details: ["Desde el aeropuerto de Florianópolis", "Hacia Floripa / Bombinhas / Camboriú", "Servicio privado exclusivo"],
-        price: "USD 100"
-      },
-      {
-        id: 'act-2',
-        tag: "Excursión Estrella",
-        title: "Excursión Playas de Bombinhas",
-        subtitle: "Playas tranquilas, agua cristalina y cero preocupaciones.",
-        includes: ["Traslado ida y vuelta", "Visita a playas seleccionadas", "Tiempo libre para disfrutar", "Asistencia en español"],
-        details: ["Duración aprox: medio día", "Salida desde Florianópolis / Bombinhas", "Apta para parejas y familias"],
-        price: "USD 80"
-      },
-      {
-        id: 'act-3',
-        tag: "Combo Ahorro",
-        title: "Bombinhas Relax – Traslados + Excursión",
-        subtitle: "Todo organizado para que solo disfrutes del viaje.",
-        includes: ["Traslado Florianópolis ↔ Bombinhas", "Excursión playas de Bombinhas", "Asistencia en español"],
-        details: ["No incluye alojamiento", "Ideal si ya tenés dónde hospedarte", "Coordinación total de logística"],
-        price: "USD 220"
-      }
-    ],
+    activities: displayPackages,
     destinations: [
       { title: 'Florianópolis', img: 'https://images.unsplash.com/photo-1626017088062-8e31a9863266?q=80&w=2070', desc: 'Traslados desde aeropuerto y paseos en la isla.' },
       { title: 'Bombinhas', img: 'https://images.unsplash.com/photo-1563116640-1a221f00882e?q=80&w=2070', desc: 'Tours de playas, buceo y traslados directos.' },
